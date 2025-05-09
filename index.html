@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>BIND Installation & DNS Setup Guide</title>
+  <style>
+    body {
+      background-color: #121212;
+      color: #e0e0e0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+      margin: 0;
+      padding: 20px;
+    }
+
+    a {
+      color: #4fc3f7;
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    h1, h2 {
+      color: #ffca28;
+    }
+
+    section {
+      margin-bottom: 30px;
+    }
+
+    pre {
+      background-color: #1e1e1e;
+      color: #c3e88d;
+      padding: 15px;
+      border-radius: 8px;
+      overflow-x: auto;
+    }
+
+    code {
+      font-family: Consolas, monospace;
+    }
+
+    .note {
+      background-color: #263238;
+      padding: 15px;
+      border-left: 5px solid #4fc3f7;
+      border-radius: 6px;
+      margin-top: 15px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>BIND Installation & DNS Configuration on CentOS 7</h1>
+
+  <section>
+    <h2>📁 Resource Link</h2>
+    <p>
+      Access the files here: 
+      <a href="https://drive.google.com/drive/folders/1Xsh1nZ8n274PF2cXjF1TvqB4YAu5cOHT" target="_blank">
+        Google Drive Folder
+      </a>
+    </p>
+  </section>
+
+  <section>
+    <h2>🛠️ Install BIND on CentOS 7 (Server)</h2>
+    <p>Install the DNS server package:</p>
+    <pre><code>sudo yum install bind bind-utils -y</code></pre>
+
+    <p>Start and enable BIND:</p>
+    <pre><code>sudo systemctl start named
+sudo systemctl enable named</code></pre>
+  </section>
+
+  <section>
+    <h2>⚙️ Configure <code>/etc/named.conf</code></h2>
+    <p>Open the configuration file:</p>
+    <pre><code>sudo vi /etc/named.conf</code></pre>
+
+    <p>Add your forward and reverse zones (replace "25" with your Reg. No.’s last 4 digits):</p>
+    <pre><code>zone "hostzone25.csa.lk" IN { type master; file "hostzone25.csa.lk.zone"; };
+zone "1.10.25.in-addr.arpa" IN { type master; file "10.25.1.zone"; };</code></pre>
+  </section>
+
+  <section>
+    <h2>📄 Create Zone Files</h2>
+    <h3>Forward zone file</h3>
+    <pre><code>sudo vi /var/named/hostzone25.csa.lk.zone</code></pre>
+    <p>Add:</p>
+    <pre><code>$TTL 86400
+@ IN SOA dnserver.hostzone25.csa.lk. admin.hostzone25.csa.lk. (
+  2025050901 ; Serial
+  3600       ; Refresh
+  1800       ; Retry
+  604800     ; Expire
+  86400 )    ; Minimum TTL
+@ IN NS dnserver.hostzone25.csa.lk.
+dnserver IN A 10.25.1.10
+clientpc IN A 10.25.1.11</code></pre>
+
+    <h3>Reverse zone file</h3>
+    <pre><code>sudo vi /var/named/10.25.1.zone</code></pre>
+    <p>Add:</p>
+    <pre><code>$TTL 86400
+@ IN SOA dnserver.hostzone25.csa.lk. admin.hostzone25.csa.lk. (
+  2025050901 3600 1800 604800 86400 )
+@ IN NS dnserver.hostzone25.csa.lk.
+10 IN PTR dnserver.hostzone25.csa.lk.
+11 IN PTR clientpc.hostzone25.csa.lk.</code></pre>
+  </section>
+
+  <section>
+    <h2>🔐 Set File Permissions</h2>
+    <pre><code>sudo chown named:named /var/named/hostzone25.csa.lk.zone /var/named/10.25.1.zone</code></pre>
+  </section>
+
+  <section>
+    <h2>🔄 Restart & Test</h2>
+    <p>Restart BIND:</p>
+    <pre><code>sudo systemctl restart named</code></pre>
+
+    <p>On Fedora (client), set DNS server:</p>
+    <pre><code>echo "nameserver 10.25.1.10" | sudo tee /etc/resolv.conf</code></pre>
+
+    <p>Test with dig:</p>
+    <pre><code>dig @10.25.1.10 dnserver.hostzone25.csa.lk
+dig @10.25.1.10 -x 10.25.1.10</code></pre>
+  </section>
+
+  <section class="note">
+    <h2>💡 Simplifications Made</h2>
+    <ul>
+      <li>Skipped firewall configuration (DNS might work without it in labs).</li>
+      <li>Assumed SELinux is permissive or non-blocking.</li>
+      <li>Minimal zone file entries added for the task.</li>
+      <li>Focused only on essential commands.</li>
+    </ul>
+  </section>
+
+  <section class="note">
+    <h2>🖥️ VMware Networking Tip</h2>
+    <p>Ensure both VMs are on the same network (NAT or Host-Only).</p>
+    <p>Test connectivity using:</p>
+    <pre><code>ping 10.25.1.10</code></pre>
+  </section>
+
+</body>
+</html>
